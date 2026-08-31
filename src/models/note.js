@@ -1,17 +1,5 @@
-import { Schema, model } from 'mongoose';
-
-const NOTE_TAGS = [
-  'Work',
-  'Personal',
-  'Meeting',
-  'Shopping',
-  'Ideas',
-  'Travel',
-  'Finance',
-  'Health',
-  'Important',
-  'Todo',
-];
+import { Schema } from 'mongoose';
+import { model } from 'mongoose';
 
 const noteSchema = new Schema(
   {
@@ -22,16 +10,32 @@ const noteSchema = new Schema(
     },
     content: {
       type: String,
-      default: '',
+      required: false,
       trim: true,
+      default: '',
     },
     tag: {
       type: String,
-      enum: NOTE_TAGS,
+      required: false,
+      enum: [
+        'Work',
+        'Personal',
+        'Meeting',
+        'Shopping',
+        'Ideas',
+        'Travel',
+        'Finance',
+        'Health',
+        'Important',
+        'Todo',
+      ],
       default: 'Todo',
     },
   },
-  { timestamps: true },
+  {
+    timestamps: true,
+    versionKey: false,
+  },
 );
 
-export const Note = model('Note', noteSchema, 'notes');
+export const Note = model('Note', noteSchema);
