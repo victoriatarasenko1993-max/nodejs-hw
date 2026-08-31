@@ -11,11 +11,17 @@ import notesRoutes from './routes/notesRoutes.js';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(logger);
-app.use(express.json());
-app.use(cors());         
+// Глобальні middleware
+app.use(logger);         // 1. Логер першим — бачить усі запити
+app.use(express.json()); // 2. Парсинг JSON-тіла
+app.use(cors());         // 3. Дозвіл для запитів з інших доменів
+
 app.use(notesRoutes);
+
+// 404 — якщо маршрут не знайдено
 app.use(notFoundHandler);
+
+// Error — якщо під час запиту виникла помилка
 app.use(errorHandler);
 
 await connectMongoDB();
