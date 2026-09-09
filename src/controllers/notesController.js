@@ -1,6 +1,6 @@
 import createHttpError from 'http-errors';
 import { Note } from '../models/note.js';
-import mongoose from 'mongoose'; 
+import mongoose from 'mongoose';
 
 export const getAllNotes = async (req, res, next) => {
   try {
@@ -8,26 +8,30 @@ export const getAllNotes = async (req, res, next) => {
     const perPage = Math.max(1, parseInt(req.query.perPage, 10) || 10);
     const { tag, search } = req.query;
 
-    const filter = {
-      userId: req.user._id,
-    };
+    const notesQuery = Note.find().where('userId').equals(req.user._id);
+    const countQuery = Note.countDocuments().where('userId').equals(req.user._id);
 
     if (tag) {
-      filter.tag = tag;
+      notesQuery.where('tag').equals(tag);
+      countQuery.where('tag').equals(tag);
     }
 
     if (search) {
-      filter.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { content: { $regex: search, $options: 'i' } },
+      const searchRegex = new RegExp(search, 'i');
+      const orCondition = [
+        { title: searchRegex },
+        { content: searchRegex },
       ];
+
+      notesQuery.or(orCondition);
+      countQuery.or(orCondition);
     }
 
     const skip = (page - 1) * perPage;
 
     const [notes, totalNotes] = await Promise.all([
-      Note.find(filter).skip(skip).limit(perPage),
-      Note.countDocuments(filter),
+      notesQuery.skip(skip).limit(perPage).exec(),
+      countQuery.exec(),
     ]);
 
     const totalPages = Math.ceil(totalNotes / perPage);
