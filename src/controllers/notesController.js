@@ -1,10 +1,12 @@
 import createHttpError from 'http-errors';
-
 import { Note } from '../models/note.js';
+import mongoose from 'mongoose'; 
 
 export const getAllNotes = async (req, res, next) => {
   try {
-    const { page = 1, perPage = 10, tag, search } = req.query;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const perPage = Math.max(1, parseInt(req.query.perPage, 10) || 10);
+    const { tag, search } = req.query;
 
     const filter = {
       userId: req.user._id,
@@ -45,6 +47,11 @@ export const getAllNotes = async (req, res, next) => {
 export const getNoteById = async (req, res, next) => {
   try {
     const { noteId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(noteId)) {
+      throw createHttpError(404, 'Note not found');
+    }
+
     const note = await Note.findOne({ _id: noteId, userId: req.user._id });
 
     if (!note) {
@@ -72,6 +79,11 @@ export const createNote = async (req, res, next) => {
 export const deleteNote = async (req, res, next) => {
   try {
     const { noteId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(noteId)) {
+      throw createHttpError(404, 'Note not found');
+    }
+
     const note = await Note.findOneAndDelete({
       _id: noteId,
       userId: req.user._id,
@@ -90,9 +102,17 @@ export const deleteNote = async (req, res, next) => {
 export const updateNote = async (req, res, next) => {
   try {
     const { noteId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(noteId)) {
+      throw createHttpError(404, 'Note not found');
+    }
+
+    const updateData = { ...req.body };
+    delete updateData.userId;
+
     const note = await Note.findOneAndUpdate(
       { _id: noteId, userId: req.user._id },
-      req.body,
+      updateData,
       {
         returnDocument: 'after',
         runValidators: true,
