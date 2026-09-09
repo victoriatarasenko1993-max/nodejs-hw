@@ -1,35 +1,44 @@
 import createHttpError from 'http-errors';
+import { isValidObjectId } from 'mongoose';
+
 import { Session } from '../models/session.js';
 import { User } from '../models/user.js';
 
 export const authenticate = async (req, res, next) => {
-  if (!req.cookies.accessToken) {
-    throw createHttpError(401, 'Missing access token');
+  try {
+    const { sessionId, accessToken } = req.cookies;
+
+    if (!accessToken) {
+      throw createHttpError(401, 'Missing access token');
+    }
+
+    if (!sessionId || !isValidObjectId(sessionId)) {
+      throw createHttpError(401, 'Session not found');
+    }
+
+    const session = await Session.findOne({
+      _id: sessionId,
+      accessToken,
+    });
+
+    if (!session) {
+      throw createHttpError(401, 'Session not found');
+    }
+
+    if (session.accessTokenValidUntil <= new Date()) {
+      throw createHttpError(401, 'Access token expired');
+    }
+
+    const user = await User.findById(session.userId);
+
+    if (!user) {
+      throw createHttpError(401);
+    }
+
+    req.user = user;
+
+    next();
+  } catch (error) {
+    next(error);
   }
-
-  const session = await Session.findOne({
-    _id: req.cookies.sessionId,
-    accessToken: req.cookies.accessToken,
-  });
-
-  if (!session) {
-    throw createHttpError(401, 'Session not found');
-  }
-
-  const isAccessTokenExpired =
-    new Date() > new Date(session.accessTokenValidUntil);
-
-  if (isAccessTokenExpired) {
-    throw createHttpError(401, 'Access token expired');
-  }
-
-  const user = await User.findById(session.userId);
-
-  if (!user) {
-    throw createHttpError(401);
-  }
-
-  req.user = user;
-
-  next();
 };
